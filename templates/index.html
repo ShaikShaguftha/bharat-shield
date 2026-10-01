@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BharatShield</title>
+    <title>BharatShield Lite</title>
 
     <style>
         :root {
@@ -539,11 +539,10 @@
     </style>
 </head>
 
-    <body>
+<body>
     <div class="container">
         <nav>
             <div class="brand">
-
                 <div>
                     <h1>BharatShield</h1>
                     <p>Multilingual AI Safety Audit Agent</p>
@@ -652,7 +651,7 @@
                 <div class="panel-top">
                     <div>
                         <p class="small-label">AGENTIC RED TEAM</p>
-                        <h3>BharatShield Audit Agent</h3>
+                        <h3>🛡 BharatShield Audit Agent</h3>
                     </div>
 
                     <span class="badge">Plan → Test → Fix</span>
@@ -737,3 +736,247 @@
         </footer>
     </div>
 
+    <script>
+        const shieldToggle = document.getElementById("shieldToggle");
+        const modeLabel = document.getElementById("modeLabel");
+
+        const chatInput = document.getElementById("chatInput");
+        const sendButton = document.getElementById("sendButton");
+
+        const botOutput = document.getElementById("botOutput");
+        const botResponse = document.getElementById("botResponse");
+        const outputHeader = document.getElementById("outputHeader");
+
+        const auditButton = document.getElementById("auditButton");
+        const loading = document.getElementById("loading");
+
+        const results = document.getElementById("results");
+        const findings = document.getElementById("findings");
+
+        function shieldEnabled() {
+            return shieldToggle.checked;
+        }
+
+        function updateMode() {
+            if (shieldEnabled()) {
+                modeLabel.textContent = "Shield Mode";
+                modeLabel.classList.add("safe");
+            } else {
+                modeLabel.textContent = "Vulnerable Mode";
+                modeLabel.classList.remove("safe");
+            }
+        }
+
+        shieldToggle.addEventListener("change", updateMode);
+
+        document.querySelectorAll(".chip").forEach((button) => {
+            button.addEventListener("click", () => {
+                chatInput.value = button.dataset.text;
+                chatInput.focus();
+            });
+        });
+
+        sendButton.addEventListener("click", async () => {
+            const message = chatInput.value.trim();
+
+            if (!message) {
+                alert("Please type or choose a test prompt first.");
+                return;
+            }
+
+            sendButton.disabled = true;
+            sendButton.textContent = "Sending...";
+
+            try {
+                const response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        shield_mode: shieldEnabled()
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Something went wrong.");
+                }
+
+                botResponse.textContent = data.response;
+                botOutput.style.display = "block";
+
+                if (data.blocked) {
+                    outputHeader.textContent = "SHIELD MODE BLOCKED THIS REQUEST";
+                    outputHeader.style.color = "#65e6a7";
+                } else {
+                    outputHeader.textContent = "TARGET RESPONSE";
+                    outputHeader.style.color = "#ffb4b1";
+                }
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                sendButton.disabled = false;
+                sendButton.textContent = "Send to Target Bot";
+            }
+        });
+
+        auditButton.addEventListener("click", async () => {
+            auditButton.disabled = true;
+            auditButton.textContent = "Audit running...";
+            loading.style.display = "flex";
+
+            const loadingTitle = document.getElementById("loadingTitle");
+            const loadingText = document.getElementById("loadingText");
+
+            const stages = [
+                [
+                    "Planning multilingual tests...",
+                    "Preparing English and Hinglish attacks."
+                ],
+                [
+                    "Testing target chatbot...",
+                    "Sending controlled prompts to CitizenSeva Assist."
+                ],
+                [
+                    "Detecting security failures...",
+                    "Checking for instruction leaks, privacy leaks, and unsafe actions."
+                ],
+                [
+                    "Generating security fixes...",
+                    "Groq GPT-OSS-20B is explaining risks and recommending defences."
+                ]
+            ];
+
+            let currentStage = 0;
+
+            const interval = setInterval(() => {
+                currentStage = Math.min(currentStage + 1, stages.length - 1);
+
+                loadingTitle.textContent = stages[currentStage][0];
+                loadingText.textContent = stages[currentStage][1];
+            }, 1000);
+
+            try {
+                const response = await fetch("/api/audit", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        shield_mode: shieldEnabled()
+                    })
+                });
+
+                const audit = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(audit.error || "Audit failed.");
+                }
+
+                showAudit(audit);
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                clearInterval(interval);
+                loading.style.display = "none";
+                auditButton.disabled = false;
+                auditButton.textContent = "Run Full Safety Audit";
+            }
+        });
+
+        function showAudit(audit) {
+            results.style.display = "block";
+
+            document.getElementById("score").textContent =
+                audit.safety_score + "/100";
+
+            document.getElementById("tests").textContent =
+                audit.total_tests;
+
+            document.getElementById("failures").textContent =
+                audit.failed;
+
+            document.getElementById("passes").textContent =
+                audit.passed;
+
+            document.getElementById("riskCounts").textContent =
+                audit.critical + " critical · " + audit.high + " high";
+
+            document.getElementById("analysisEngine").textContent =
+                "Analysis engine: " + audit.analysis_engine;
+
+            findings.innerHTML = "";
+
+            audit.results.forEach((item) => {
+                const isPass = item.result === "PASS";
+                const severityClass = isPass
+                    ? "safe"
+                    : item.severity.toLowerCase();
+
+                const finding = document.createElement("article");
+
+                finding.className = "finding" + (isPass ? " pass" : "");
+
+                finding.innerHTML = `
+                    <div class="finding-top">
+                        <div>
+                            <h4>
+                                ${escapeHtml(item.result)}
+                                · ${escapeHtml(item.id)}
+                                · ${escapeHtml(item.type)}
+                            </h4>
+
+                            <small>${escapeHtml(item.language)}</small>
+                        </div>
+
+                        <span class="severity ${severityClass}">
+                            ${escapeHtml(item.severity)}
+                        </span>
+                    </div>
+
+                    <p>
+                        <strong>Attack prompt:</strong>
+                        ${escapeHtml(item.prompt)}
+                    </p>
+
+                    <p>
+                        <strong>Assessment:</strong>
+                        ${escapeHtml(item.reason)}
+                    </p>
+
+                    <p>
+                        <strong>Recommended defence:</strong>
+                        ${escapeHtml(item.fix)}
+                    </p>
+
+                    <p>
+                        <strong>Analysis source:</strong>
+                        ${escapeHtml(item.analysis_source)}
+                    </p>
+
+                    <details>
+                        <summary>View target chatbot response</summary>
+                        <pre>${escapeHtml(item.target_response)}</pre>
+                    </details>
+                `;
+
+                findings.appendChild(finding);
+            });
+
+            results.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
+
+        function escapeHtml(value) {
+            const div = document.createElement("div");
+            div.textContent = value || "";
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
