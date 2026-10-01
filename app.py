@@ -438,3 +438,107 @@ third-party chatbots.
 """
 
     return report
+
+# Adding flask routes and server point
+@app.route("/health")
+def health():
+    """
+    Simple health endpoint for Render deployment and API verification.
+    """
+
+    return jsonify({
+        "status": "healthy",
+        "agent": "BharatShield",
+        "message": "Multilingual AI safety audit agent is running."
+    })
+
+
+@app.route("/")
+def home():
+    """
+    Serves the main BharatShield dashboard.
+    """
+
+    return render_template("index.html")
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """
+    API endpoint used by index.html JavaScript.
+
+    Input JSON:
+    {
+        "message": "user prompt",
+        "shield_mode": true or false
+    }
+    """
+
+    data = request.get_json() or {}
+
+    message = data.get("message", "").strip()
+    shield_mode = data.get("shield_mode", False)
+
+    if not message:
+        return jsonify({
+            "error": "Please type or choose a test prompt first."
+        }), 400
+
+    result = target_citizen_bot(
+        message=message,
+        shield_mode=shield_mode
+    )
+
+    return jsonify(result)
+
+
+@app.route("/api/audit", methods=["POST"])
+def audit():
+    """
+    API endpoint that runs the complete BharatShield agent workflow.
+
+    Input JSON:
+    {
+        "shield_mode": true or false
+    }
+    """
+
+    global last_audit
+
+    data = request.get_json() or {}
+
+    shield_mode = data.get("shield_mode", False)
+
+    last_audit = run_bharatshield_audit(
+        shield_mode=shield_mode
+    )
+
+    return jsonify(last_audit)
+
+
+@app.route("/api/download-report")
+def download_report():
+    """
+    Downloads the most recently generated BharatShield audit report.
+    """
+
+    if not last_audit:
+        return jsonify({
+            "error": "Run the BharatShield audit before downloading the report."
+        }), 400
+
+    report = create_report(last_audit)
+
+    file_data = BytesIO(report.encode("utf-8"))
+    file_data.seek(0)  
+
+    return send_file(
+        file_data,
+        as_attachment=True,
+        download_name="bharatshield_lite_report.txt",
+        mimetype="text/plain"
+    )
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
